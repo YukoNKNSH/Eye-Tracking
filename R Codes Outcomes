@@ -319,3 +319,295 @@ d estimate: 0.6674951 (medium)
     lower     upper 
 0.3763096 0.9586806 
 
+##3.2 Form Recognition##
+
+# List all sheet names
+excel_sheets("Scoring_Form_Recognition.xlsx")
+
+# Read a specific sheet by name
+FormRecognition <- read_excel("Scoring_Form_Recognition.xlsx", sheet = "All_Score")
+
+#Make a long format
+library(tidyverse)
+library(reshape2)
+FormRecognition_long <- reshape2::melt(FormRecognition, id = c('Participant', 'Emotion')) 
+names(FormRecognition_long)[3:4] <- c('Session', 'Score')
+View(FormRecognition_long)
+
+# Descriptive statistics grouped by TextType and Session
+library(psych)
+psych::describeBy(FormRecognition_long$Score, 
+                  group = list(FormRecognition_long$Emotion, FormRecognition_long$Session))
+
+Descriptive statistics by group 
+: Negative
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.88 1.18      2    1.85 1.48   0   4     4 0.01    -0.98 0.17
+--------------------------------------------------------------------------------------------------------------- 
+: Neutral
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.88 1.92      2    1.61 1.48   0  10    10 1.83     4.75 0.27
+--------------------------------------------------------------------------------------------------------------- 
+: Positive
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.63 1.72      1    1.39 1.48   0   8     8 1.44     2.49 0.25
+--------------------------------------------------------------------------------------------------------------- 
+: Negative
+: Session 2
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.82 1.29      2    1.76 1.48   0   5     5 0.28    -0.65 0.18
+--------------------------------------------------------------------------------------------------------------- 
+: Neutral
+: Session 2
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.78 1.45      2    1.66 1.48   0   6     6 0.75     0.09 0.21
+--------------------------------------------------------------------------------------------------------------- 
+: Positive
+: Session 2
+   vars  n mean  sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.55 1.5      1    1.39 1.48   0   5     5 0.88    -0.31 0.21
+
+# BoxPlots
+library(ggplot2)
+
+# BoxPlots 2 (Updated) NO OULIER COLOR, Change the Session name and make fonts bigger
+library(ggplot2)
+p2 <- ggplot(FormRecognition_long, aes(x = Emotion, y = Score)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(name = "Score", breaks = seq(0, 18, 2), limits = c(0, 18)) + 
+  scale_x_discrete(name = "Text Type") + 
+  facet_wrap(~ Session,
+             labeller = as_labeller(c(
+               "Session 1" = "Immediate Post-test",
+               "Session 2" = "Delayed Post-test"
+             ))) +
+  labs(title = "Form Recognition") + 
+  theme(
+    plot.title = element_text(size = 22, face = "bold", hjust = 0.5),
+    strip.text = element_text(size = 18, face = "bold"),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+
+print(p2)
+
+### How can we show p-value* and effect sizes? In-Progress####
+
+##Shapiro-Wilk Normality Test (Just In Case)##
+# Shapiro-Wilk for Session 1 by Emotion
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 1`)  # p =.002**
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 1`)   # < .001***
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 1`)  # < .001***
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 1`
+W = 0.91579, p-value = 0.001878
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 1`
+W = 0.81051, p-value = 1.869e-06
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 1`
+W = 0.83364, p-value = 6.867e-06
+
+# Shapiro-Wilk for Session 2 by Emotion
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 2`)  # p =.004**
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 2`)   # < .001***
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 2`)  # < .001***
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 2`
+W = 0.9241, p-value = 0.003718
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 2`
+W = 0.90257, p-value = 0.000667
+
+Shapiro-Wilk normality test
+data:  FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 2`
+W = 0.84648, p-value = 1.477e-05
+
+# Levene's tests
+# 1. Levene's Test across Sessions (Session 1 vs Session 2) # p =  0.6316
+car::leveneTest(FormRecognition_long$Score, FormRecognition_long$Session, center = median)
+# 2. Levene's Test across Emotions (Negative / Neutral / Positive) # p = 0.2075
+car::leveneTest(FormRecognition_long$Score, FormRecognition_long$Emotion, center = median)
+# 3. Levene's Test across Emotion × Session combinations # p = 0.4382
+car::leveneTest(FormRecognition_long$Score, interaction(FormRecognition_long$Emotion, FormRecognition_long$Session), center = median)
+
+1. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value Pr(>F)
+group   1  0.2304 0.6316
+      292         
+2. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value Pr(>F)
+group   2  1.5812 0.2075
+      291       
+3. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value Pr(>F)
+group   5  0.9671 0.4382
+      288      
+
+### Within (Emotion) x Within (Session) (RM ANOVA) ####
+library(ez)
+
+ez_results <- ezANOVA(
+  data = FormRecognition_long,             
+  dv = .(Score),                 
+  wid = .(Participant),          
+  within = .(Emotion, Session),     # ✅ Two within-subjects factors
+  type = 2,
+  return_aov = TRUE,
+  detailed = TRUE
+)
+
+print(ez_results)
+
+$ANOVA
+           Effect DFn DFd          SSn       SSd            F            p p<.05          ges
+1     (Intercept)   1  48 905.63265306 287.70068 151.09581008 1.943312e-16     * 5.733481e-01
+2         Emotion   2  96   3.93877551 171.72789   1.10093488 3.367215e-01       5.810628e-03
+3         Session   1  48   0.48979592 132.17687   0.17786927 6.750937e-01       7.262604e-04
+4 Emotion:Session   2  96   0.02040816  82.31293   0.01190083 9.881712e-01       3.028192e-05
+
+$`Mauchly's Test for Sphericity`
+           Effect         W         p p<.05
+2         Emotion 0.9347007 0.2045528      
+4 Emotion:Session 0.9418964 0.2449479      
+
+$`Sphericity Corrections`
+           Effect       GGe     p[GG] p[GG]<.05      HFe     p[HF] p[HF]<.05
+2         Emotion 0.9387033 0.3339875           0.975584 0.3356699          
+4 Emotion:Session 0.9450870 0.9853762           0.982638 0.9873522          
+
+$aov
+
+Call:
+aov(formula = formula(aov_formula), data = data)
+
+Grand Mean: 1.755102
+
+Stratum 1: Participant
+
+Terms:
+                Residuals
+Sum of Squares   287.7007
+Deg. of Freedom        48
+
+Residual standard error: 2.448217
+
+Stratum 2: Participant:Emotion
+
+Terms:
+                  Emotion Residuals
+Sum of Squares    3.93878 171.72789
+Deg. of Freedom         2        96
+
+Residual standard error: 1.337472
+2 out of 4 effects not estimable
+Estimated effects may be unbalanced
+
+Stratum 3: Participant:Session
+
+Terms:
+                 Session Residuals
+Sum of Squares    0.4898  132.1769
+Deg. of Freedom        1        48
+
+Residual standard error: 1.659423
+2 out of 3 effects not estimable
+Estimated effects are balanced
+
+Stratum 4: Participant:Emotion:Session
+
+Terms:
+                Emotion:Session Residuals
+Sum of Squares          0.02041  82.31293
+Deg. of Freedom               2        96
+
+Residual standard error: 0.9259732
+Estimated effects may be unbalanced
+
+#NOT SIGNIFICANT, no need to condcut follow-up tests (JUst IN CASE)####
+##T-test
+# Load library
+library(dplyr)
+
+###T-test Session 1 + Session 2 Combined###
+
+# Step 1: Filter Session 1 and 2
+data_s1s2 <- FormRecognition_long %>%
+  filter(Session %in% c("Session 1", "Session 2"))
+
+# Step 2: Sum scores across sessions for each Participant × Emotion
+combined_scores_FR <- data_s1s2 %>%
+  group_by(Participant, Emotion) %>%
+  summarise(Score = sum(Score), .groups = "drop")
+
+# Step 3: Pairwise t-test
+pairwise.t.test(
+  x = combined_scores$Score,
+  g = combined_scores$Emotion,
+  paired = TRUE,
+  p.adjust.method = "bonferroni"
+)
+
+Pairwise comparisons using paired t tests 
+
+data:  combined_scores$Score and combined_scores$Emotion 
+
+         Negative Neutral
+Neutral  1.00     -      
+Positive 0.54     0.53   
+
+##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
+library(tidyverse)
+library(effsize)
+
+# Negative vs Neutral
+data_neg_vs_neu <- combined_scores_FR %>%
+  filter(Emotion %in% c("Negative", "Neutral")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 0.01696278 (negligible)
+95 percent confidence interval:
+     lower      upper 
+-0.3341091  0.3680346 
+
+# Negative vs Positive
+data_neg_vs_pos <- combined_scores_FR %>%
+  filter(Emotion %in% c("Negative", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 0.2069161 (small)
+95 percent confidence interval:
+      lower       upper 
+-0.09702344  0.51085560 
+
+# Negative vs Neutral
+data_neu_vs_pos <- combined_scores_FR %>%
+  filter(Emotion %in% c("Neutral", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 0.1701462 (negligible)
+95 percent confidence interval:
+      lower       upper 
+-0.07820405  0.41849644 
+
