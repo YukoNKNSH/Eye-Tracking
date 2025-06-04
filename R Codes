@@ -233,6 +233,18 @@ data_neu_vs_pos <- combined_scores %>%
 
 effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
 
+##Check potential outliers##
+# Save standardized residuals
+model_vocab <- lm(Score ~ Emotion * Session, data = VocabMultiple_long)
+VocabMultiple_long$standres_vocab <- rstandard(model_vocab)
+#>3#
+# Number of outliers
+sum(abs(VocabMultiple_long$standres_vocab) > 3)
+# Row indices of outliers
+which(abs(VocabMultiple_long$standres_vocab) > 3)
+# View full rows of those outliers
+VocabMultiple_long[which(abs(VocabMultiple_long$standres_vocab) > 3), ]
+
 ##########################
 ##3.2 Form Recognition##
 
@@ -366,3 +378,15 @@ data_neu_vs_pos <- combined_scores_FR %>%
   droplevels()
 
 effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+##Check potential outliers##
+# Save standardized residuals
+model_vocab <- lm(Score ~ Emotion * Session, data = FormRecognition_long)
+FormRecognition_long$standres_vocab <- rstandard(model_vocab)
+#>3#
+# Number of outliers
+sum(abs(FormRecognition_long$standres_vocab) > 3)
+# Row indices of outliers
+which(abs(FormRecognition_long$standres_vocab) > 3)
+# View full rows of those outliers
+FormRecognition_long[which(abs(FormRecognition_long$standres_vocab) > 3), ]
