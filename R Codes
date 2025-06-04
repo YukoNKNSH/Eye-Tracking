@@ -71,7 +71,7 @@ p1 <- ggplot(valence, aes(x = Emotion, y = Response)) +
 print(p1)
 
 
-#1.3 Arosal
+#1.3 Arousal
 # Read a specific sheet by name
 arousal <- read_excel("Emotionality Rating & Self-Assessment Manekins.xlsx", sheet = "Arousal")
 
