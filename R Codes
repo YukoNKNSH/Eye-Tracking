@@ -138,22 +138,36 @@ library(psych)
 psych::describeBy(VocabMultiple_long$Score, 
            group = list(VocabMultiple_long$Emotion, VocabMultiple_long$Session))
 
-# BoxPlots (NO OULIER COLOR)
+# BoxPlots 2 (Updated) NO OULIER COLOR, Change the Session name and make fonts bigger
 library(ggplot2)
-
-p1 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) + 
-  geom_boxplot(outlier.shape = NA) +  # << removes black outlier dots
+p2 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) + 
+  geom_boxplot(outlier.shape = NA) + 
   geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
   stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
   scale_y_continuous(name = "Score", breaks = seq(0, 18, 2), limits = c(0, 18)) + 
   scale_x_discrete(name = "Text Type") + 
-  facet_wrap(~ Session) +   # <<< Adds panels for Session 1 and 2
+  facet_wrap(~ Session,
+             labeller = as_labeller(c(
+               "Session 1" = "Immediate Post-test",
+               "Session 2" = "Delayed Post-test"
+             ))) +
   labs(title = "Meaning Recognition") + 
   theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+    plot.title = element_text(size = 22, face = "bold", hjust = 0.5),
+    strip.text = element_text(size = 18, face = "bold"),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
   )
 
-print(p1)
+print(p2)
+
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+
+### How can we show p-value* and effect sizes? In-Progress####
 
 ##Shapiro-Wilk Normality Test (Just In Case)##
 # Shapiro-Wilk for Session 1 by Emotion
@@ -174,15 +188,6 @@ car::leveneTest(VocabMultiple_long$Score, VocabMultiple_long$Emotion, center = m
 # 3. Levene's Test across Emotion × Session combinations # p = 0.04396 *
 car::leveneTest(VocabMultiple_long$Score, interaction(VocabMultiple_long$Emotion, VocabMultiple_long$Session), center = median)
 
-############We don't need these###############
-# Filter for Session 1 # p = 0.8136
-cat("Levene’s Test for Emotion (Session 1 only):\n")
-print(leveneTest(Score ~ Emotion, data = subset(VocabMultiple_long, Session == "Session 1"), center = median))
-
-# Filter for Session 2 # p = 0.03414 *
-cat("\nLevene’s Test for Emotion (Session 2 only):\n")
-print(leveneTest(Score ~ Emotion, data = subset(VocabMultiple_long, Session == "Session 2"), center = median))
-################################################
 
 ### Within (Emotion) x Within (Session) (RM ANOVA) ####
 
@@ -201,122 +206,52 @@ ez_results <- ezANOVA(
 print(ez_results)
 
 
-######## within (RM ANOVA) for each session: BUT We don't need these ########
-ez_results_s1<- ezANOVA(
-  data = subset(VocabMultiple_long, Session == "Session 1"),
-  dv = .(Score),
-  within = .(Emotion),          # ✅ CHANGED from between to within
-  wid = .(Participant),
-  type = 2,
-  return_aov = TRUE
-)
-print(ez_results_s1)
+###T-test Session 1 + Session 2 Combined###
 
-ez_results_s2<- ezANOVA(
-  data = subset(VocabMultiple_long, Session == "Session 2"),
-  dv = .(Score),
-  within = .(Emotion),          # ✅ CHANGED from between to within
-  wid = .(Participant),
-  type = 2,
-  return_aov = TRUE
-)
-print(ez_results_s2)
-####################################################################
+# Step 1: Filter Session 1 and 2
+data_s1s2 <- VocabMultiple_long %>%
+  filter(Session %in% c("Session 1", "Session 2"))
 
+# Step 2: Sum scores across sessions for each Participant × Emotion
+combined_scores <- data_s1s2 %>%
+  group_by(Participant, Emotion) %>%
+  summarise(Score = sum(Score), .groups = "drop")
 
-##T-test##
-# Load library
-library(dplyr)
-
-# Filter data for Session 1
-data_s1 <- VocabMultiple_long %>% filter(Session == "Session 1")
-
-cat("🔹 Pairwise t-tests for Session 1 (paired):\n")
+# Step 3: Pairwise t-test
 pairwise.t.test(
-  x = data_s1$Score,
-  g = data_s1$Emotion,
-  paired = TRUE,  ## Because this is a within-subject design.
-  p.adjust.method = "bonferroni"  # or "holm" / "BH" if preferred
-)
-
-# Filter data for Session 2
-data_s2 <- VocabMultiple_long %>% filter(Session == "Session 2")
-
-cat("\n🔹 Pairwise t-tests for Session 2 (paired):\n")
-pairwise.t.test(
-  x = data_s2$Score,
-  g = data_s2$Emotion,
-  paired = TRUE,  ## Because this is a within-subject design.
+  x = combined_scores$Score,
+  g = combined_scores$Emotion,
+  paired = TRUE,
   p.adjust.method = "bonferroni"
 )
-##Effect Sizes##
-# Effect sizes for Session 1: Negative vs Neutral
+
+##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
 library(tidyverse)
-
-data_neg_vs_neu_s1 <- VocabMultiple_long %>%
-  filter(Session == "Session 1", Emotion %in% c("Negative", "Neutral")) %>%
-  droplevels()
-
 library(effsize)
-attach(data_neg_vs_neu_s1)
 
-effsize::cohen.d(Score, Emotion, paired = TRUE) ## Because this is a within-subject design.
-
-detach(data_neg_vs_neu_s1)
-
-# Effect sizes for Session 1: Negative vs Positive
-data_neg_vs_pos_s1 <- VocabMultiple_long %>%
-  filter(Session == "Session 1", Emotion %in% c("Negative", "Positive")) %>%
+# Negative vs Neutral
+data_neg_vs_neu <- combined_scores %>%
+  filter(Emotion %in% c("Negative", "Neutral")) %>%
   droplevels()
 
-attach(data_neg_vs_pos_s1)
+attach(data_neg_vs_neu)
 effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_pos_s1)
+detach(data_neg_vs_neu)
 
-# Effect sizes for Session 1: Neutral vs Positive
-data_neu_vs_pos_s1 <- VocabMultiple_long %>%
-  filter(Session == "Session 1", Emotion %in% c("Neutral", "Positive")) %>%
+# Negative vs Positive
+data_neg_vs_pos <- combined_scores %>%
+  filter(Emotion %in% c("Negative", "Positive")) %>%
   droplevels()
 
-attach(data_neu_vs_pos_s1)
+attach(data_neg_vs_pos)
 effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neu_vs_pos_s1)
+detach(data_neg_vs_pos)
 
-# Effect sizes for Session 2: Negative vs Neutral
-data_neg_vs_neu_s2 <- VocabMultiple_long %>%
-  filter(Session == "Session 2", Emotion %in% c("Negative", "Neutral")) %>%
+# Negative vs Neutral
+data_neu_vs_pos <- combined_scores %>%
+  filter(Emotion %in% c("Neutral", "Positive")) %>%
   droplevels()
 
-attach(data_neg_vs_neu_s2)
+attach(data_neu_vs_pos)
 effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_neu_s2)
-
-# Effect sizes for Session 2: Negative vs Positive
-data_neg_vs_pos_s2 <- VocabMultiple_long %>%
-  filter(Session == "Session 2", Emotion %in% c("Negative", "Positive")) %>%
-  droplevels()
-
-attach(data_neg_vs_pos_s2)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_pos_s2)
-
-# Effect sizes for Session 2: Neutral vs Positive
-data_neu_vs_pos_s2 <- VocabMultiple_long %>%
-  filter(Session == "Session 2", Emotion %in% c("Neutral", "Positive")) %>%
-  droplevels()
-
-attach(data_neu_vs_pos_s2)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neu_vs_pos_s2)
-
-##Check potential outliers##
-# Save standardized residuals
-model_vocab <- lm(Score ~ Emotion * Session, data = VocabMultiple_long)
-VocabMultiple_long$standres_vocab <- rstandard(model_vocab)
-#>3#
-# Number of outliers
-sum(abs(VocabMultiple_long$standres_vocab) > 3)
-# Row indices of outliers
-which(abs(VocabMultiple_long$standres_vocab) > 3)
-# View full rows of those outliers
-VocabMultiple_long[which(abs(VocabMultiple_long$standres_vocab) > 3), ]
+detach(data_neu_vs_pos)
