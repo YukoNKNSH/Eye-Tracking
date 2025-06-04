@@ -1,0 +1,322 @@
+getwd()
+setwd("/Users/y0u3k2o5/Library/CloudStorage/OneDrive-MichiganStateUniversity/2024-2025/Eye-tracking Project")
+rm(list=ls()) #clear environment
+
+#import the data
+library(haven)
+
+# Load necessary libraries
+install.packages("readxl")      # Only once
+library(readxl)
+########################################
+####1.Emotionality Ratings####
+#######################################
+
+# List all sheet names
+excel_sheets("Emotionality Rating & Self-Assessment Manekins.xlsx")
+
+#1.1 Emotionality Ratings
+# Read a specific sheet by name
+emotion <- read_excel("Emotionality Rating & Self-Assessment Manekins.xlsx", sheet = "Emotionality Rating")
+
+#descriptive statistics
+install.packages("psych")
+library(psych)
+describeBy(emotion$Response, group = emotion$Emotion)
+
+###BoxPlots: NO Outlier Color###
+library(ggplot2)
+
+p1 <- ggplot(compr_long, aes(x = TextType, y = Score)) + 
+  geom_boxplot(outlier.shape = NA) +  # Removes default black outlier dots
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(name = "Score", breaks = seq(0, 17, 2), limits = c(0, 17)) + 
+  scale_x_discrete(name = "Text Type") + 
+  labs(title = "Comprehension Questions") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  )
+
+print(p1)
+
+#1.2 Valence
+# Read a specific sheet by name
+valence <- read_excel("Emotionality Rating & Self-Assessment Manekins.xlsx", sheet = "Valence")
+
+#descriptive statistics
+install.packages("psych")
+library(psych)
+describeBy(valence$Response, group = valence$Emotion)
+
+library(ggplot2)
+
+###BoxPlots: NO Outlier Color###
+
+p1 <- ggplot(valence, aes(x = Emotion, y = Response)) + 
+  geom_boxplot(outlier.shape = NA) +  # removes default black outliers
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(
+    name = "Response", 
+    breaks = seq(1, 9, 2), 
+    limits = c(1, 9)
+  ) + 
+  scale_x_discrete(name = "Text Type") + 
+  labs(title = "Valence") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  )
+
+print(p1)
+
+
+#1.3 Arosal
+# Read a specific sheet by name
+arousal <- read_excel("Emotionality Rating & Self-Assessment Manekins.xlsx", sheet = "Arousal")
+
+#descriptive statistics
+install.packages("psych")
+library(psych)
+describeBy(arousal$Response, group = arousal$Emotion)
+
+###BoxPlots: NO Outlier Color###
+
+library(ggplot2)
+
+p1 <- ggplot(arousal, aes(x = Emotion, y = Response)) + 
+  geom_boxplot(outlier.shape = NA) +  # removes default black outliers
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(
+    name = "Response", 
+    breaks = seq(1, 9, 2), 
+    limits = c(1, 9)
+  ) + 
+  scale_x_discrete(name = "Text Type") + 
+  labs(title = "Arousal") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  )
+
+print(p1)
+
+########################################
+####3.Vocabulary Tests####
+#######################################
+
+##3.1 Meaning Recognition
+
+# List all sheet names
+excel_sheets("Scoring_Multiple_Choice.xlsx")
+
+# Read a specific sheet by name
+VocabMultiple <- read_excel("Scoring_Multiple_Choice.xlsx", sheet = "All_Score")
+
+#Make a Long format
+library(tidyverse)
+
+VocabMultiple_long <- VocabMultiple %>%
+  pivot_longer(
+    cols = starts_with("Session"),       # Session 1 and Session 2
+    names_to = "Session",
+    values_to = "Score"
+  )
+
+View(VocabMultiple_long)
+######
+d$ID<-as.factor(c(1:147))
+
+#change to long format
+library(reshape2)
+VocabMultiple_long<- reshape2::melt(VocabMultiple, id = c('Participant', 'Emotion')) 
+names(VocabMultiple_long)[3:4] <- c('Session', 'Score')
+View(VocabMultiple_long)
+
+# Descriptive statistics grouped by TextType and Session
+library(psych)
+psych::describeBy(VocabMultiple_long$Score, 
+           group = list(VocabMultiple_long$Emotion, VocabMultiple_long$Session))
+
+# BoxPlots (NO OULIER COLOR)
+library(ggplot2)
+
+p1 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) + 
+  geom_boxplot(outlier.shape = NA) +  # << removes black outlier dots
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(name = "Score", breaks = seq(0, 18, 2), limits = c(0, 18)) + 
+  scale_x_discrete(name = "Text Type") + 
+  facet_wrap(~ Session) +   # <<< Adds panels for Session 1 and 2
+  labs(title = "Meaning Recognition") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  )
+
+print(p1)
+
+##Shapiro-Wilk Normality Test (Just In Case)##
+# Shapiro-Wilk for Session 1 by Emotion
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 1`)  # < .001***
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 1`)   # < .001***
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 1`)  # < .001***
+
+# Shapiro-Wilk for Session 2 by Emotion
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 2`)  # p = 0.002
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 2`)   # p = 0.035
+shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 2`)  # p = 0.001
+
+# Levene's tests
+# 1. Levene's Test across Sessions (Session 1 vs Session 2) # p =  0.0002952 ***
+car::leveneTest(VocabMultiple_long$Score, VocabMultiple_long$Session, center = median)
+# 2. Levene's Test across Emotions (Negative / Neutral / Positive) # p = 0.698
+car::leveneTest(VocabMultiple_long$Score, VocabMultiple_long$Emotion, center = median)
+# 3. Levene's Test across Emotion × Session combinations # p = 0.04396 *
+car::leveneTest(VocabMultiple_long$Score, interaction(VocabMultiple_long$Emotion, VocabMultiple_long$Session), center = median)
+
+############We don't need these###############
+# Filter for Session 1 # p = 0.8136
+cat("Levene’s Test for Emotion (Session 1 only):\n")
+print(leveneTest(Score ~ Emotion, data = subset(VocabMultiple_long, Session == "Session 1"), center = median))
+
+# Filter for Session 2 # p = 0.03414 *
+cat("\nLevene’s Test for Emotion (Session 2 only):\n")
+print(leveneTest(Score ~ Emotion, data = subset(VocabMultiple_long, Session == "Session 2"), center = median))
+################################################
+
+### Within (Emotion) x Within (Session) (RM ANOVA) ####
+
+library(ez)
+
+ez_results <- ezANOVA(
+  data = VocabMultiple_long,              # e.g., VocabMultiple_long
+  dv = .(Score),                 
+  wid = .(Participant),          
+  within = .(Emotion, Session),     # ✅ Two within-subjects factors
+  type = 2,
+  return_aov = TRUE,
+  detailed = TRUE
+)
+
+print(ez_results)
+
+
+######## within (RM ANOVA) for each session: BUT We don't need these ########
+ez_results_s1<- ezANOVA(
+  data = subset(VocabMultiple_long, Session == "Session 1"),
+  dv = .(Score),
+  within = .(Emotion),          # ✅ CHANGED from between to within
+  wid = .(Participant),
+  type = 2,
+  return_aov = TRUE
+)
+print(ez_results_s1)
+
+ez_results_s2<- ezANOVA(
+  data = subset(VocabMultiple_long, Session == "Session 2"),
+  dv = .(Score),
+  within = .(Emotion),          # ✅ CHANGED from between to within
+  wid = .(Participant),
+  type = 2,
+  return_aov = TRUE
+)
+print(ez_results_s2)
+####################################################################
+
+
+##T-test##
+# Load library
+library(dplyr)
+
+# Filter data for Session 1
+data_s1 <- VocabMultiple_long %>% filter(Session == "Session 1")
+
+cat("🔹 Pairwise t-tests for Session 1 (paired):\n")
+pairwise.t.test(
+  x = data_s1$Score,
+  g = data_s1$Emotion,
+  paired = TRUE,  ## Because this is a within-subject design.
+  p.adjust.method = "bonferroni"  # or "holm" / "BH" if preferred
+)
+
+# Filter data for Session 2
+data_s2 <- VocabMultiple_long %>% filter(Session == "Session 2")
+
+cat("\n🔹 Pairwise t-tests for Session 2 (paired):\n")
+pairwise.t.test(
+  x = data_s2$Score,
+  g = data_s2$Emotion,
+  paired = TRUE,  ## Because this is a within-subject design.
+  p.adjust.method = "bonferroni"
+)
+##Effect Sizes##
+# Effect sizes for Session 1: Negative vs Neutral
+library(tidyverse)
+
+data_neg_vs_neu_s1 <- VocabMultiple_long %>%
+  filter(Session == "Session 1", Emotion %in% c("Negative", "Neutral")) %>%
+  droplevels()
+
+library(effsize)
+attach(data_neg_vs_neu_s1)
+
+effsize::cohen.d(Score, Emotion, paired = TRUE) ## Because this is a within-subject design.
+
+detach(data_neg_vs_neu_s1)
+
+# Effect sizes for Session 1: Negative vs Positive
+data_neg_vs_pos_s1 <- VocabMultiple_long %>%
+  filter(Session == "Session 1", Emotion %in% c("Negative", "Positive")) %>%
+  droplevels()
+
+attach(data_neg_vs_pos_s1)
+effsize::cohen.d(Score, Emotion, paired = TRUE)
+detach(data_neg_vs_pos_s1)
+
+# Effect sizes for Session 1: Neutral vs Positive
+data_neu_vs_pos_s1 <- VocabMultiple_long %>%
+  filter(Session == "Session 1", Emotion %in% c("Neutral", "Positive")) %>%
+  droplevels()
+
+attach(data_neu_vs_pos_s1)
+effsize::cohen.d(Score, Emotion, paired = TRUE)
+detach(data_neu_vs_pos_s1)
+
+# Effect sizes for Session 2: Negative vs Neutral
+data_neg_vs_neu_s2 <- VocabMultiple_long %>%
+  filter(Session == "Session 2", Emotion %in% c("Negative", "Neutral")) %>%
+  droplevels()
+
+attach(data_neg_vs_neu_s2)
+effsize::cohen.d(Score, Emotion, paired = TRUE)
+detach(data_neg_vs_neu_s2)
+
+# Effect sizes for Session 2: Negative vs Positive
+data_neg_vs_pos_s2 <- VocabMultiple_long %>%
+  filter(Session == "Session 2", Emotion %in% c("Negative", "Positive")) %>%
+  droplevels()
+
+attach(data_neg_vs_pos_s2)
+effsize::cohen.d(Score, Emotion, paired = TRUE)
+detach(data_neg_vs_pos_s2)
+
+# Effect sizes for Session 2: Neutral vs Positive
+data_neu_vs_pos_s2 <- VocabMultiple_long %>%
+  filter(Session == "Session 2", Emotion %in% c("Neutral", "Positive")) %>%
+  droplevels()
+
+attach(data_neu_vs_pos_s2)
+effsize::cohen.d(Score, Emotion, paired = TRUE)
+detach(data_neu_vs_pos_s2)
+
+##Check potential outliers##
+# Save standardized residuals
+model_vocab <- lm(Score ~ Emotion * Session, data = VocabMultiple_long)
+VocabMultiple_long$standres_vocab <- rstandard(model_vocab)
+#>3#
+# Number of outliers
+sum(abs(VocabMultiple_long$standres_vocab) > 3)
+# Row indices of outliers
+which(abs(VocabMultiple_long$standres_vocab) > 3)
+# View full rows of those outliers
+VocabMultiple_long[which(abs(VocabMultiple_long$standres_vocab) > 3), ]
