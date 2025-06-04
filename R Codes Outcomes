@@ -35,6 +35,37 @@ library(psych)
 psych::describeBy(VocabMultiple_long$Score, 
            group = list(VocabMultiple_long$Emotion, VocabMultiple_long$Session))
 
+ Descriptive statistics by group 
+: Negative
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49  5.1 2.42      5    4.98 1.48   0  12    12 0.63     0.87 0.35
+--------------------------------------------------------------------------------------------------------------- 
+: Neutral
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 3.98 2.28      3    3.68 1.48   0  10    10 1.26     1.47 0.33
+--------------------------------------------------------------------------------------------------------------- 
+: Positive
+: Session 1
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 3.12 2.01      3     2.9 1.48   0   8     8 1.05     0.56 0.29
+--------------------------------------------------------------------------------------------------------------- 
+: Negative
+: Session 2
+   vars  n mean   sd median trimmed  mad min max range  skew kurtosis   se
+X1    1 49 3.71 1.19      4    3.78 1.48   0   6     6 -0.61     0.71 0.17
+--------------------------------------------------------------------------------------------------------------- 
+: Neutral
+: Session 2
+   vars  n mean   sd median trimmed  mad min max range  skew kurtosis   se
+X1    1 49 3.12 1.62      3    3.15 1.48   0   6     6 -0.17    -0.84 0.23
+--------------------------------------------------------------------------------------------------------------- 
+: Positive
+: Session 2
+   vars  n mean   sd median trimmed  mad min max range skew kurtosis   se
+X1    1 49 1.88 1.27      2    1.85 1.48   0   4     4  0.1    -1.08 0.18
+
 # BoxPlots 2 (Updated) NO OULIER COLOR, Change the Session name and make fonts bigger
 library(ggplot2)
 p2 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) + 
@@ -60,10 +91,6 @@ p2 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) +
 
 print(p2)
 
-library(ggplot2)
-library(ggpubr)
-library(dplyr)
-
 ### How can we show p-value* and effect sizes? In-Progress####
 
 ##Shapiro-Wilk Normality Test (Just In Case)##
@@ -72,10 +99,40 @@ shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 1`)  
 shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 1`)   # < .001***
 shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 1`)  # < .001***
 
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 1`
+W = 0.90567, p-value = 0.0008462
+
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 1`
+W = 0.85367, p-value = 2.303e-05
+
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 1`
+W = 0.8684, p-value = 5.935e-05
+
 # Shapiro-Wilk for Session 2 by Emotion
 shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 2`)  # p = 0.002
 shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 2`)   # p = 0.035
 shapiro.test(VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 2`)  # p = 0.001
+
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Negative", ]$`Session 2`
+W = 0.91776, p-value = 0.002204
+
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Neutral", ]$`Session 2`
+W = 0.94953, p-value = 0.03536
+
+Shapiro-Wilk normality test
+
+data:  VocabMultiple[VocabMultiple$Emotion == "Positive", ]$`Session 2`
+W = 0.91181, p-value = 0.001367
 
 # Levene's tests
 # 1. Levene's Test across Sessions (Session 1 vs Session 2) # p =  0.0002952 ***
@@ -85,7 +142,27 @@ car::leveneTest(VocabMultiple_long$Score, VocabMultiple_long$Emotion, center = m
 # 3. Levene's Test across Emotion × Session combinations # p = 0.04396 *
 car::leveneTest(VocabMultiple_long$Score, interaction(VocabMultiple_long$Emotion, VocabMultiple_long$Session), center = median)
 
+1. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value    Pr(>F)    
+group   1  13.423 0.0002952 ***
+      292                      
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
+2. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value Pr(>F)
+group   2    0.36  0.698
+      291               
+Warning message:
+In leveneTest.default(VocabMultiple_long$Score, VocabMultiple_long$Emotion,  :
+  VocabMultiple_long$Emotion coerced to factor.
+
+3. Levene's Test for Homogeneity of Variance (center = median)
+       Df F value  Pr(>F)  
+group   5  2.3141 0.04396 *
+      288                  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 ### Within (Emotion) x Within (Session) (RM ANOVA) ####
 
 library(ez)
@@ -102,6 +179,73 @@ ez_results <- ezANOVA(
 
 print(ez_results)
 
+Warning: Converting "Participant" to factor for ANOVA.
+Warning: Converting "Emotion" to factor for ANOVA.
+> print(ez_results)
+$ANOVA
+           Effect DFn DFd         SSn       SSd          F            p p<.05         ges
+1     (Intercept)   1  48 3573.554422 484.27891 354.197980 8.486282e-24     * 0.782503938
+2         Emotion   2  96  179.027211 200.63946  42.829592 5.066008e-14     * 0.152715477
+3         Session   1  48   99.459184 227.70748  20.965674 3.327744e-05     * 0.091019451
+4 Emotion:Session   2  96    3.693878  80.63946   2.198751 1.164983e-01       0.003705144
+
+$`Mauchly's Test for Sphericity`
+           Effect         W          p p<.05
+2         Emotion 0.8652325 0.03331361     *
+4 Emotion:Session 0.9965309 0.92158019      
+
+$`Sphericity Corrections`
+           Effect       GGe        p[GG] p[GG]<.05       HFe        p[HF] p[HF]<.05
+2         Emotion 0.8812378 1.236837e-12         * 0.9122602 5.365788e-13         *
+4 Emotion:Session 0.9965429 1.166948e-01           1.0396394 1.164983e-01          
+
+$aov
+
+Call:
+aov(formula = formula(aov_formula), data = data)
+
+Grand Mean: 3.486395
+
+Stratum 1: Participant
+
+Terms:
+                Residuals
+Sum of Squares   484.2789
+Deg. of Freedom        48
+
+Residual standard error: 3.176341
+
+Stratum 2: Participant:Emotion
+
+Terms:
+                 Emotion Residuals
+Sum of Squares  179.0272  200.6395
+Deg. of Freedom        2        96
+
+Residual standard error: 1.445681
+2 out of 4 effects not estimable
+Estimated effects may be unbalanced
+
+Stratum 3: Participant:Session
+
+Terms:
+                  Session Residuals
+Sum of Squares   99.45918 227.70748
+Deg. of Freedom         1        48
+
+Residual standard error: 2.178051
+2 out of 3 effects not estimable
+Estimated effects are balanced
+
+Stratum 4: Participant:Emotion:Session
+
+Terms:
+                Emotion:Session Residuals
+Sum of Squares          3.69388  80.63946
+Deg. of Freedom               2        96
+
+Residual standard error: 0.916512
+Estimated effects may be unbalanced
 
 ###T-test Session 1 + Session 2 Combined###
 
@@ -122,6 +266,15 @@ pairwise.t.test(
   p.adjust.method = "bonferroni"
 )
 
+Pairwise comparisons using paired t tests 
+data:  combined_scores$Score and combined_scores$Emotion 
+
+         Negative Neutral
+Neutral  0.002    -      
+Positive 1.3e-14  2.2e-05
+
+P value adjustment method: bonferroni 
+
 ##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
 library(tidyverse)
 library(effsize)
@@ -131,24 +284,38 @@ data_neg_vs_neu <- combined_scores %>%
   filter(Emotion %in% c("Negative", "Neutral")) %>%
   droplevels()
 
-attach(data_neg_vs_neu)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_neu)
+effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 0.5379336 (medium)
+95 percent confidence interval:
+    lower     upper 
+0.2233814 0.8524858  
 
 # Negative vs Positive
 data_neg_vs_pos <- combined_scores %>%
   filter(Emotion %in% c("Negative", "Positive")) %>%
   droplevels()
 
-attach(data_neg_vs_pos)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_pos)
+effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 1.295888 (large)
+95 percent confidence interval:
+    lower     upper 
+0.9865125 1.6052626 
+
 
 # Negative vs Neutral
 data_neu_vs_pos <- combined_scores %>%
   filter(Emotion %in% c("Neutral", "Positive")) %>%
   droplevels()
 
-attach(data_neu_vs_pos)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neu_vs_pos)
+effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+d estimate: 0.6674951 (medium)
+95 percent confidence interval:
+    lower     upper 
+0.3763096 0.9586806 
+
