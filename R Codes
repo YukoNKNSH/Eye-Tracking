@@ -113,21 +113,8 @@ excel_sheets("Scoring_Multiple_Choice.xlsx")
 # Read a specific sheet by name
 VocabMultiple <- read_excel("Scoring_Multiple_Choice.xlsx", sheet = "All_Score")
 
-#Make a Long format
+#Make a long format
 library(tidyverse)
-
-VocabMultiple_long <- VocabMultiple %>%
-  pivot_longer(
-    cols = starts_with("Session"),       # Session 1 and Session 2
-    names_to = "Session",
-    values_to = "Score"
-  )
-
-View(VocabMultiple_long)
-######
-d$ID<-as.factor(c(1:147))
-
-#change to long format
 library(reshape2)
 VocabMultiple_long<- reshape2::melt(VocabMultiple, id = c('Participant', 'Emotion')) 
 names(VocabMultiple_long)[3:4] <- c('Session', 'Score')
@@ -162,10 +149,6 @@ p2 <- ggplot(VocabMultiple_long, aes(x = Emotion, y = Score)) +
   )
 
 print(p2)
-
-library(ggplot2)
-library(ggpubr)
-library(dplyr)
 
 ### How can we show p-value* and effect sizes? In-Progress####
 
