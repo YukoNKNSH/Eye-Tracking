@@ -232,3 +232,137 @@ data_neu_vs_pos <- combined_scores %>%
   droplevels()
 
 effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+##########################
+##3.2 Form Recognition##
+
+# List all sheet names
+excel_sheets("Scoring_Form_Recognition.xlsx")
+
+# Read a specific sheet by name
+FormRecognition <- read_excel("Scoring_Form_Recognition.xlsx", sheet = "All_Score")
+
+#Make a long format
+library(tidyverse)
+library(reshape2)
+FormRecognition_long <- reshape2::melt(FormRecognition, id = c('Participant', 'Emotion')) 
+names(FormRecognition_long)[3:4] <- c('Session', 'Score')
+View(FormRecognition_long)
+
+# Descriptive statistics grouped by TextType and Session
+library(psych)
+psych::describeBy(FormRecognition_long$Score, 
+                  group = list(FormRecognition_long$Emotion, FormRecognition_long$Session))
+
+# BoxPlots
+library(ggplot2)
+
+# BoxPlots 2 (Updated) NO OULIER COLOR, Change the Session name and make fonts bigger
+library(ggplot2)
+p2 <- ggplot(FormRecognition_long, aes(x = Emotion, y = Score)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(name = "Score", breaks = seq(0, 18, 2), limits = c(0, 18)) + 
+  scale_x_discrete(name = "Text Type") + 
+  facet_wrap(~ Session,
+             labeller = as_labeller(c(
+               "Session 1" = "Immediate Post-test",
+               "Session 2" = "Delayed Post-test"
+             ))) +
+  labs(title = "Form Recognition") + 
+  theme(
+    plot.title = element_text(size = 22, face = "bold", hjust = 0.5),
+    strip.text = element_text(size = 18, face = "bold"),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+
+print(p2)
+
+### How can we show p-value* and effect sizes? In-Progress####
+
+##Shapiro-Wilk Normality Test (Just In Case)##
+# Shapiro-Wilk for Session 1 by Emotion
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 1`)  # p =.002**
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 1`)   # < .001***
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 1`)  # < .001***
+
+# Shapiro-Wilk for Session 2 by Emotion
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Negative", ]$`Session 2`)  # p =.004**
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Neutral", ]$`Session 2`)   # < .001***
+shapiro.test(FormRecognition[FormRecognition$Emotion == "Positive", ]$`Session 2`)  # < .001***
+
+# Levene's tests
+# 1. Levene's Test across Sessions (Session 1 vs Session 2) # p =  0.6316
+car::leveneTest(FormRecognition_long$Score, FormRecognition_long$Session, center = median)
+# 2. Levene's Test across Emotions (Negative / Neutral / Positive) # p = 0.2075
+car::leveneTest(FormRecognition_long$Score, FormRecognition_long$Emotion, center = median)
+# 3. Levene's Test across Emotion × Session combinations # p = 0.4382
+car::leveneTest(FormRecognition_long$Score, interaction(FormRecognition_long$Emotion, FormRecognition_long$Session), center = median)
+
+### Within (Emotion) x Within (Session) (RM ANOVA) ####
+library(ez)
+
+ez_results <- ezANOVA(
+  data = FormRecognition_long,             
+  dv = .(Score),                 
+  wid = .(Participant),          
+  within = .(Emotion, Session),     # ✅ Two within-subjects factors
+  type = 2,
+  return_aov = TRUE,
+  detailed = TRUE
+)
+
+print(ez_results)
+
+#NOT SIGNIFICANT, no need to condcut follow-up tests (JUst IN CASE)####
+##T-test
+# Load library
+library(dplyr)
+
+###T-test Session 1 + Session 2 Combined###
+
+# Step 1: Filter Session 1 and 2
+data_s1s2 <- FormRecognition_long %>%
+  filter(Session %in% c("Session 1", "Session 2"))
+
+# Step 2: Sum scores across sessions for each Participant × Emotion
+combined_scores_FR <- data_s1s2 %>%
+  group_by(Participant, Emotion) %>%
+  summarise(Score = sum(Score), .groups = "drop")
+
+# Step 3: Pairwise t-test
+pairwise.t.test(
+  x = combined_scores$Score,
+  g = combined_scores$Emotion,
+  paired = TRUE,
+  p.adjust.method = "bonferroni"
+)
+
+##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
+library(tidyverse)
+library(effsize)
+
+# Negative vs Neutral
+data_neg_vs_neu <- combined_scores_FR %>%
+  filter(Emotion %in% c("Negative", "Neutral")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
+
+# Negative vs Positive
+data_neg_vs_pos <- combined_scores_FR %>%
+  filter(Emotion %in% c("Negative", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
+
+# Negative vs Neutral
+data_neu_vs_pos <- combined_scores_FR %>%
+  filter(Emotion %in% c("Neutral", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
