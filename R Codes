@@ -217,24 +217,18 @@ data_neg_vs_neu <- combined_scores %>%
   filter(Emotion %in% c("Negative", "Neutral")) %>%
   droplevels()
 
-attach(data_neg_vs_neu)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_neu)
+effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
 
 # Negative vs Positive
 data_neg_vs_pos <- combined_scores %>%
   filter(Emotion %in% c("Negative", "Positive")) %>%
   droplevels()
 
-attach(data_neg_vs_pos)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neg_vs_pos)
+effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
 
 # Negative vs Neutral
 data_neu_vs_pos <- combined_scores %>%
   filter(Emotion %in% c("Neutral", "Positive")) %>%
   droplevels()
 
-attach(data_neu_vs_pos)
-effsize::cohen.d(Score, Emotion, paired = TRUE)
-detach(data_neu_vs_pos)
+effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
