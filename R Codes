@@ -8,8 +8,106 @@ library(haven)
 # Load necessary libraries
 install.packages("readxl")      # Only once
 library(readxl)
+
 ########################################
-####1.Emotionality Ratings####
+####1.Comprehension Questions####
+#######################################
+# List all sheet names
+excel_sheets("Comprehension Question_Scoring.xlsx")
+
+# Read a specific sheet by name
+comprQ <- read_excel("Comprehension Question_Scoring.xlsx", sheet = "All_Score")
+summary(comprQ[, c("Positive", "Neutral", "Negative")])
+
+
+#Make a long format
+library(tidyverse)
+library(reshape2)
+comprQ_long <- melt(comprQ, id.vars = "Participant")
+names(comprQ_long) <- c("Participant", "Emotion", "Score")
+View(comprQ_long)
+
+
+### Discriptive Analaysis with the Long Format###
+#descriptive statistics
+library(psych)
+psych::describeBy(comprQ_long$Score, group = comprQ_long$Emotion)
+
+library(ggplot2)
+
+##NO Color Outliers, Big fonts##
+p2 <- ggplot(comprQ_long, aes(x = Emotion, y = Score)) + 
+  geom_boxplot() + 
+  geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
+  scale_y_continuous(name = "Score", breaks = seq(0, 17, 2), limits = c(0, 17)) + 
+  scale_x_discrete(name = "Text Type") + 
+  labs(title = "Comprehension Questions") + 
+  theme(
+    plot.title = element_text(size = 22, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+print(p2)
+
+##Shapiro-Wilk Normality Test (Just In Case)##
+shapiro.test(compr_long$Score[compr_long$Emotion == "Negative"])
+shapiro.test(compr_long$Score[compr_long$Emotion == "Neutral"])
+shapiro.test(compr_long$Score[compr_long$Emotion == "Positive"])
+
+#Levene's test 0.32
+car::leveneTest(Score ~ Emotion, data = compr_long, center = median) #Statisrically not-significant
+
+##Within-Participant Design RM ANOVA###
+library(ez)
+ez_results <- ezANOVA(
+  data = compr_long,
+  dv = .(Score),
+  wid = .(Participant),
+  within = .(Emotion),          # ✅ CHANGED from between to within
+  type = 2,
+  return_aov = TRUE,
+  detailed = TRUE
+)
+print(ez_results)
+
+##T-test
+pairwise.t.test(x = compr_long$Score,      # DV: comprehension scores
+                g = compr_long$Emotion,   # Grouping variable
+                paired = TRUE,            # Not repeated measures
+                p.adj = "bonf")            # Bonferroni correction
+
+
+##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
+library(tidyverse)
+library(effsize)
+
+# Negative vs Neutral
+data_neg_vs_neu <- compr_long %>%
+  filter(Emotion %in% c("Negative", "Neutral")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
+
+# Negative vs Positive
+data_neg_vs_pos <- compr_long %>%
+  filter(Emotion %in% c("Negative", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
+
+# Negative vs Neutral
+data_neu_vs_pos <- compr_long %>%
+  filter(Emotion %in% c("Neutral", "Positive")) %>%
+  droplevels()
+
+effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+
+########################################
+####2.Emotionality Ratings####
 #######################################
 
 # List all sheet names
