@@ -16,9 +16,8 @@ library(readxl)
 excel_sheets("Comprehension Question_Scoring.xlsx")
 
 # Read a specific sheet by name
-comprQ <- read_excel("Comprehension Question_Scoring.xlsx", sheet = "All_Score")
+comprQ <- read_excel("Comprehension Question_Scoring.xlsx", sheet = "All_Score_Updated")
 summary(comprQ[, c("Positive", "Neutral", "Negative")])
-
 
 #Make a long format
 library(tidyverse)
@@ -27,20 +26,33 @@ comprQ_long <- melt(comprQ, id.vars = "Participant")
 names(comprQ_long) <- c("Participant", "Emotion", "Score")
 View(comprQ_long)
 
-
 ### Discriptive Analaysis with the Long Format###
 #descriptive statistics
 library(psych)
 psych::describeBy(comprQ_long$Score, group = comprQ_long$Emotion)
+comprQ_long %>%
+  group_by(Emotion) %>%  # e.g., Emotion, TextType
+  summarise(
+    n = n(),
+    Mean = mean(Score),
+    SD = sd(Score),
+    SE = SD / sqrt(n),
+    CI_Lower = Mean - qt(0.975, df = n - 1) * SE,
+    CI_Upper = Mean + qt(0.975, df = n - 1) * SE
+  )
+
 
 library(ggplot2)
 
+comprQ_long_100 <- comprQ_long
+comprQ_long_100$Score <- comprQ_long_100$Score * 100
+
 ##NO Color Outliers, Big fonts##
-p2 <- ggplot(comprQ_long, aes(x = Emotion, y = Score)) + 
+p2 <- ggplot(comprQ_long_100, aes(x = Emotion, y = Score)) + 
   geom_boxplot() + 
   geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
   stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
-  scale_y_continuous(name = "Score", breaks = seq(0, 17, 2), limits = c(0, 17)) + 
+  scale_y_continuous(name = "Score(%)", breaks = seq(0, 100, 10), limits = c(0, 100)) + 
   scale_x_discrete(name = "Text Type") + 
   labs(title = "Comprehension Questions") + 
   theme(
@@ -50,7 +62,14 @@ p2 <- ggplot(comprQ_long, aes(x = Emotion, y = Score)) +
     axis.text.x = element_text(size = 14),
     axis.text.y = element_text(size = 14)
   )
+
 print(p2)
+
+##Shapiro-Wilk Normality Test (Just In Case)##
+shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Negative"])
+shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Neutral"])
+shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Positive"])
+
 
 ##Shapiro-Wilk Normality Test (Just In Case)##
 shapiro.test(compr_long$Score[compr_long$Emotion == "Negative"])
@@ -58,12 +77,12 @@ shapiro.test(compr_long$Score[compr_long$Emotion == "Neutral"])
 shapiro.test(compr_long$Score[compr_long$Emotion == "Positive"])
 
 #Levene's test 0.32
-car::leveneTest(Score ~ Emotion, data = compr_long, center = median) #Statisrically not-significant
+car::leveneTest(Score ~ Emotion, data = comprQ_long, center = median) #Statisrically not-significant
 
 ##Within-Participant Design RM ANOVA###
 library(ez)
 ez_results <- ezANOVA(
-  data = compr_long,
+  data = comprQ_long,
   dv = .(Score),
   wid = .(Participant),
   within = .(Emotion),          # ✅ CHANGED from between to within
@@ -73,9 +92,10 @@ ez_results <- ezANOVA(
 )
 print(ez_results)
 
+
 ##T-test
-pairwise.t.test(x = compr_long$Score,      # DV: comprehension scores
-                g = compr_long$Emotion,   # Grouping variable
+pairwise.t.test(x = comprQ_long$Score,      # DV: comprehension scores
+                g = comprQ_long$Emotion,   # Grouping variable
                 paired = TRUE,            # Not repeated measures
                 p.adj = "bonf")            # Bonferroni correction
 
@@ -85,25 +105,42 @@ library(tidyverse)
 library(effsize)
 
 # Negative vs Neutral
-data_neg_vs_neu <- compr_long %>%
+data_neg_vs_neu <- comprQ_long %>%
   filter(Emotion %in% c("Negative", "Neutral")) %>%
   droplevels()
 
 effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
 
 # Negative vs Positive
-data_neg_vs_pos <- compr_long %>%
+data_neg_vs_pos <- comprQ_long %>%
   filter(Emotion %in% c("Negative", "Positive")) %>%
   droplevels()
 
 effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
 
 # Negative vs Neutral
-data_neu_vs_pos <- compr_long %>%
+data_neu_vs_pos <- comprQ_long %>%
   filter(Emotion %in% c("Neutral", "Positive")) %>%
   droplevels()
 
 effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+##Check Residual (ALL)##
+# ANOVA model without Session
+model_aov <- aov(Score ~ Emotion + Error(Participant), data = comprQ_long)
+summary(model_aov)
+# Simpler model without Error() for residual diagnostics
+model_simple <- aov(Score ~ Emotion, data = comprQ_long)
+# Residual diagnostics
+residuals_simple <- residuals(model_simple)
+hist(residuals_simple)  # Histogram of residuals
+qqnorm(residuals_simple)  # Q-Q plot
+qqline(residuals_simple)  # Q-Q line
+# Shapiro-Wilk test for normality
+shapiro.test(residuals_simple)
+# Check if the mean of residuals is ~ 0
+mean(residuals_simple)
+
 
 
 ########################################
