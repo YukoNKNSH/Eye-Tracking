@@ -214,7 +214,7 @@ d estimate: -0.3346984 (small)
      lower      upper 
 -0.6540594 -0.0153375 
 
-> # Negative vs Neutral
+> # Positive vs Neutral
 > data_neu_vs_pos <- comprQ_long %>%
 +   filter(Emotion %in% c("Neutral", "Positive")) %>%
 +   droplevels()
