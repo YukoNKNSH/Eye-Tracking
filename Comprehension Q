@@ -1,0 +1,244 @@
+########################################
+####1.Comprehension Questions####
+#######################################
+# List all sheet names
+excel_sheets("Comprehension Question_Scoring.xlsx")
+
+# Read a specific sheet by name
+comprQ <- read_excel("Comprehension Question_Scoring.xlsx", sheet = "All_Score_Updated")
+summary(comprQ[, c("Positive", "Neutral", "Negative")])
+
+#Make a long format
+library(tidyverse)
+library(reshape2)
+comprQ_long <- melt(comprQ, id.vars = "Participant")
+names(comprQ_long) <- c("Participant", "Emotion", "Score")
+View(comprQ_long)
+
+### Discriptive Analaysis with the Long Format###
+#descriptive statistics
+library(psych)
+psych::describeBy(comprQ_long$Score, group = comprQ_long$Emotion)
+comprQ_long %>%
+  group_by(Emotion) %>%  # e.g., Emotion, TextType
+  summarise(
+    n = n(),
+    Mean = mean(Score),
+    SD = sd(Score),
+    SE = SD / sqrt(n),
+    CI_Lower = Mean - qt(0.975, df = n - 1) * SE,
+    CI_Upper = Mean + qt(0.975, df = n - 1) * SE
+  )
+
+
+library(ggplot2)
+
+Descriptive statistics by group 
+group: Negative
+   vars  n mean   sd median trimmed  mad  min max range  skew kurtosis   se
+X1    1 43 0.72 0.19   0.73    0.74 0.13 0.18   1  0.82 -0.81     0.05 0.03
+--------------------------------------------------------------------------------- 
+group: Neutral
+   vars  n mean   sd median trimmed  mad  min max range  skew kurtosis   se
+X1    1 43 0.63 0.17   0.64    0.64 0.21 0.21   1  0.79 -0.27    -0.42 0.03
+--------------------------------------------------------------------------------- 
+group: Positive
+   vars  n mean   sd median trimmed  mad  min max range  skew kurtosis   se
+X1    1 43 0.78 0.16   0.79    0.79 0.21 0.43   1  0.57 -0.44    -0.99 0.02
+> comprQ_long %>%
++   group_by(Emotion) %>%  # e.g., Emotion, TextType
++   summarise(
++     n = n(),
++     Mean = mean(Score),
++     SD = sd(Score),
++     SE = SD / sqrt(n),
++     CI_Lower = Mean - qt(0.975, df = n - 1) * SE,
++     CI_Upper = Mean + qt(0.975, df = n - 1) * SE
++   )
+# A tibble: 3 × 7
+  Emotion      n  Mean    SD     SE CI_Lower CI_Upper
+  <fct>    <int> <dbl> <dbl>  <dbl>    <dbl>    <dbl>
+1 Negative    43 0.721 0.188 0.0286    0.663    0.779
+2 Neutral     43 0.631 0.175 0.0267    0.577    0.685
+3 Positive    43 0.779 0.156 0.0237    0.731    0.827
+> library(ggplot2)
+
+> comprQ_long_100 <- comprQ_long
+> comprQ_long_100$Score <- comprQ_long_100$Score * 100
+> ##NO Color Outliers, Big fonts##
+> p2 <- ggplot(comprQ_long_100, aes(x = Emotion, y = Score)) + 
++   geom_boxplot() + 
++   geom_jitter(color = "#008208", width = 0.4, height = 0, size = 2, alpha = 0.6) + 
++   stat_summary(fun = mean, geom = "point", color = "blue", size = 3) +
++   scale_y_continuous(name = "Score(%)", breaks = seq(0, 100, 10), limits = c(0, 100)) + 
++   scale_x_discrete(name = "Text Type") + 
++   labs(title = "Comprehension Questions") + 
++   theme(
++     plot.title = element_text(size = 22, face = "bold", hjust = 0.5),
++     axis.title.x = element_text(size = 18, face = "bold"),
++     axis.title.y = element_text(size = 18, face = "bold"),
++     axis.text.x = element_text(size = 14),
++     axis.text.y = element_text(size = 14)
++   )
+> print(p2)
+> View(comprQ_long)
+> View(comprQ_long_100)
+> ##Shapiro-Wilk Normality Test (Just In Case)##
+> shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Negative"])
+
+	Shapiro-Wilk normality test
+
+data:  comprQ_long$Score[comprQ_long$Emotion == "Negative"]
+W = 0.91918, p-value = 0.005042
+
+> shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Neutral"])
+
+	Shapiro-Wilk normality test
+
+data:  comprQ_long$Score[comprQ_long$Emotion == "Neutral"]
+W = 0.96854, p-value = 0.2812
+
+> shapiro.test(comprQ_long$Score[comprQ_long$Emotion == "Positive"])
+
+	Shapiro-Wilk normality test
+
+data:  comprQ_long$Score[comprQ_long$Emotion == "Positive"]
+W = 0.92603, p-value = 0.008519
+
+
+> #Levene's test 0.32
+> car::leveneTest(Score ~ Emotion, data = comprQ_long, center = median) #Statisrically not-significant
+Levene's Test for Homogeneity of Variance (center = median)
+       Df F value Pr(>F)
+group   2  0.2947 0.7452
+      126               
+> ##Within-Participant Design RM ANOVA###
+> library(ez)
+> ez_results <- ezANOVA(
++   data = comprQ_long,
++   dv = .(Score),
++   wid = .(Participant),
++   within = .(Emotion),          # ✅ CHANGED from between to within
++   type = 2,
++   return_aov = TRUE,
++   detailed = TRUE
++ )
+Warning: Converting "Participant" to factor for ANOVA.
+> print(ez_results)
+$ANOVA
+       Effect DFn DFd        SSn      SSd          F            p p<.05       ges
+1 (Intercept)   1  42 65.1039788 2.211547 1236.40493 8.766932e-33     * 0.9451097
+2     Emotion   2  84  0.4770606 1.569575   12.76559 1.442594e-05     * 0.1120339
+
+$`Mauchly's Test for Sphericity`
+   Effect         W         p p<.05
+2 Emotion 0.9721945 0.5609706      
+
+$`Sphericity Corrections`
+   Effect       GGe        p[GG] p[GG]<.05      HFe        p[HF] p[HF]<.05
+2 Emotion 0.9729468 1.801261e-05         * 1.019539 1.442594e-05         *
+
+$aov
+
+Call:
+aov(formula = formula(aov_formula), data = data)
+
+Grand Mean: 0.7104097
+
+Stratum 1: Participant
+
+Terms:
+                Residuals
+Sum of Squares   2.211547
+Deg. of Freedom        42
+
+Residual standard error: 0.2294687
+
+Stratum 2: Participant:Emotion
+
+Terms:
+                  Emotion Residuals
+Sum of Squares  0.4770606 1.5695746
+Deg. of Freedom         2        84
+
+Residual standard error: 0.1366946
+Estimated effects may be unbalanced
+> ##T-test
+> pairwise.t.test(x = comprQ_long$Score,      # DV: comprehension scores
++                 g = comprQ_long$Emotion,   # Grouping variable
++                 paired = TRUE,            # Not repeated measures
++                 p.adj = "bonf")            # Bonferroni correction
+
+	Pairwise comparisons using paired t tests 
+
+data:  comprQ_long$Score and comprQ_long$Emotion 
+
+         Negative Neutral
+Neutral  0.02     -      
+Positive 0.11     3.5e-05
+
+P value adjustment method: bonferroni 
+> ##Effect Sizes for Each Text (Session 1 +Session 2 Combined)##
+> library(tidyverse)
+> library(effsize)
+
+Attaching package: ‘effsize’
+
+The following object is masked from ‘package:psych’:
+
+    cohen.d
+
+> # Negative vs Neutral
+> data_neg_vs_neu <- comprQ_long %>%
++   filter(Emotion %in% c("Negative", "Neutral")) %>%
++   droplevels()
+> effsize::cohen.d(data_neg_vs_neu$Score, data_neg_vs_neu$Emotion, paired = TRUE)
+
+Cohen's d
+
+d estimate: 0.494294 (small)
+95 percent confidence interval:
+    lower     upper 
+0.1296631 0.8589248 
+
+> # Negative vs Positive
+> data_neg_vs_pos <- comprQ_long %>%
++   filter(Emotion %in% c("Negative", "Positive")) %>%
++   droplevels()
+> effsize::cohen.d(data_neg_vs_pos$Score, data_neg_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+
+d estimate: -0.3346984 (small)
+95 percent confidence interval:
+     lower      upper 
+-0.6540594 -0.0153375 
+
+> # Negative vs Neutral
+> data_neu_vs_pos <- comprQ_long %>%
++   filter(Emotion %in% c("Neutral", "Positive")) %>%
++   droplevels()
+> effsize::cohen.d(data_neu_vs_pos$Score, data_neu_vs_pos$Emotion, paired = TRUE)
+
+Cohen's d
+
+d estimate: -0.8914275 (large)
+95 percent confidence interval:
+     lower      upper 
+-1.3127651 -0.4700899 
+
+##Check Residual (ALL)##
+# ANOVA model without Session
+model_aov <- aov(Score ~ Emotion + Error(Participant), data = comprQ_long)
+summary(model_aov)
+# Simpler model without Error() for residual diagnostics
+model_simple <- aov(Score ~ Emotion, data = comprQ_long)
+# Residual diagnostics
+residuals_simple <- residuals(model_simple)
+hist(residuals_simple)  # Histogram of residuals
+qqnorm(residuals_simple)  # Q-Q plot
+qqline(residuals_simple)  # Q-Q line
+# Shapiro-Wilk test for normality
+shapiro.test(residuals_simple)
+# Check if the mean of residuals is ~ 0
+mean(residuals_simple)
